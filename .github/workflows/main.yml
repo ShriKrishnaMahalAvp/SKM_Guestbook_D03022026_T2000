@@ -1,18 +1,15 @@
-# Simple workflow for deploying a React app to GitHub Pages
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"] # Triggers on every push to the main branch
-  workflow_dispatch:   # Allows you to run this manually from the Actions tab
+    branches: ["main"]
+  workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -45,9 +42,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # If your build goes to 'dist' (Vite) use 'dist'. 
-          # If it goes to 'build' (Create React App) use 'build'.
-          path: './build' 
+          # Vite outputs to 'dist', so we point GitHub there
+          path: './dist' 
 
       - name: Deploy to GitHub Pages
         id: deployment
