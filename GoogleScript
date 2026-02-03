@@ -1,0 +1,82 @@
+/**
+ * ------------------------------------------------------------------
+ * ⚠️ INSTRUCTIONS ⚠️
+ * 1. Paste this code into your Google Apps Script editor (Code.gs).
+ * 2. Save the file (Ctrl + S).
+ * 3. Click "Deploy" -> "New Deployment".
+ * 4. Select type: "Web App".
+ * 5. Configuration:
+ * - Description: "V2 with Image Support"
+ * - Execute as: "Me"
+ * - Who has access: "Anyone" (Critical for the form to work)
+ * 6. Click "Deploy" and copy the Web App URL.
+ * ------------------------------------------------------------------
+ */
+
+function doPost(e) {
+  // Lock to prevent concurrent editing issues
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+
+  try {
+    // 1. Parse the incoming JSON data
+    var rawData = e.postData.contents;
+    var data = JSON.parse(rawData);
+
+    // 2. Open the Spreadsheet
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = doc.getSheetByName("Sheet1"); // Ensure your sheet tab is named "Sheet1"
+
+    // If "Sheet1" doesn't exist, use the first sheet
+    if (!sheet) {
+      sheet = doc.getSheets()[0];
+    }
+
+    // 3. Handle Image Upload (Save to Google Drive)
+    var imageUrl = "No Image";
+    
+    if (data.image && data.image.length > 0) {
+      try {
+        // Extract the Base64 data (remove the "data:image/png;base64," prefix)
+        var contentType = data.image.substring(5, data.image.indexOf(';'));
+        var base64String = data.image.substr(data.image.indexOf('base64,') + 7);
+        
+        // Create the Blob
+        var blob = Utilities.newBlob(Utilities.base64Decode(base64String), contentType, data.imageName || "guest_upload.png");
+        
+        // Save to Root of Google Drive (or specify a folder ID: DriveApp.getFolderById('...').createFile(blob))
+        var file = DriveApp.getRootFolder().createFile(blob);
+        
+        // Set file to be viewable by anyone with the link (optional, enables viewing in Sheet)
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        
+        imageUrl = file.getUrl(); // Get the link to the file
+      } catch (imageError) {
+        imageUrl = "Error Saving Image: " + imageError.toString();
+      }
+    }
+
+    // 4. Append the data to the Sheet
+    // Order: Timestamp | Name | Date of Function | Rating | Message | Image URL
+    var nextRow = sheet.getLastRow() + 1;
+    sheet.getRange(nextRow, 1, 1, 6).setValues([[
+      new Date(),       // Timestamp
+      data.name,        // Name
+      data.date,        // Date of Function
+      data.rating,      // Rating
+      "'"+data.message, // Message (prepended ' to prevent formula injection)
+      imageUrl          // Link to Image in Drive
+    ]]);
+
+    // 5. Return Success
+    return ContentService.createTextOutput(JSON.stringify({ "result": "success", "row": nextRow }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (e) {
+    // Return Error
+    return ContentService.createTextOutput(JSON.stringify({ "result": "error", "error": e.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}

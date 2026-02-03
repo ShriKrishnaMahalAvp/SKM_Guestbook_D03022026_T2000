@@ -1,0 +1,5 @@
+{
+  "name": "Shri Krishna Mahal Guestbook",
+  "description": "An elegant, AI-enhanced guestbook application for Shri Krishna Mahal, featuring personalized management responses and sentiment analysis powered by Gemini 3 Flash.",
+  "requestFramePermissions": []
+}
